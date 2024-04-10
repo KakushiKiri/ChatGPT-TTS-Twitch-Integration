@@ -1,0 +1,84 @@
+import os
+import json
+import time
+import tiktoken
+from openai import OpenAI, AuthenticationError
+class AI:
+    #class initializer; contains a list and OpenAI instance
+    def __init__(self):
+        self.conv_history = list()
+        self.full_history = list()
+        self.token_count = 0
+        try:
+            self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        except AuthenticationError:
+            exit('ERROR -- You Dummy, you have the wrong API Key')
+
+    def check_tokens(self, input):
+        encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+        if len(encoding.encode(input)) <= 4096:
+            self.token_count += len(encoding.encode(input))
+            return True
+        else:
+            return False
+
+    #handle_input; takes prompt as parameter
+    def handle_input(self, prompt):
+        if not self.check_tokens(prompt):
+            raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
+        
+        curr = time.time()
+        s = time.strftime('%a %d %b %Y %H:%M:%S', time.localtime(curr))
+        self.conv_history.append({'role': 'user', 'content': prompt})
+        self.full_history.append({'time': s, 'role': 'user', 'content': prompt})
+
+        if self.token_count > 13000 or len(self.conv_history) > 10:
+            while len(self.conv_history) > 10:
+                encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+                self.token_count -= len(encoding.encode(self.conv_history[0]['content']))
+                del self.conv_history[0]
+
+        prepare = self.client.chat.completions.create(  #send question to ChatGPT by sending entire conversation history
+            model='gpt-3.5-turbo',
+            messages=self.conv_history
+        )
+
+        curr = time.time()
+        s = time.strftime('%a %d %b %Y %H:%M:%S', time.localtime(curr))
+        #similar to the question, retrieve it and append to the conversation history, then return response
+        response =  prepare.choices[0].message.content
+        self.conv_history.append({'role': 'assistant', 'content': response})
+        self.full_history.append({'time': s, 'role': 'assistant', 'content': response})
+
+        return response
+    
+    #set_behavior; no parameters as it should only be used if 'behavior.txt' is present
+    def set_behavior(self):
+        #check if file is present, else raise FileNotFoundError
+        if os.path.isfile('behavior.txt'):
+            with open('behavior.txt', 'r') as fname:    #open file and store contents in variable; then call handle_input with said variable
+                behavior = fname.read()
+            self.handle_input(behavior)
+        else:
+            raise FileNotFoundError('ERROR -- No Behavior File Found')
+    
+    def dump_history(self):
+        with open('backup_history.json', 'w+') as fname:
+            json.dump(self.full_history, fname)
+
+ai_test = AI()
+print("Welcome to the ChatGPT API test!!\nInput whatever questions you have and/or type 'exit' to end the chat!\n")
+while True:
+    question = input('What Question do you Have?: ')
+    if question == 'exit' or question == 'Exit':
+        break
+    elif question == 'tokens' or question == 'Tokens':
+        print(f'\n{ai_test.token_count}\n')
+    elif question == 'history' or question == 'History':
+        for i in ai_test.conv_history:
+            print(f'{i['role']}: {i['content']}')
+    elif question == 'dump' or question == 'Dump':
+        ai_test.dump_history()
+        break
+    else:
+        print(f'\n{ai_test.handle_input(question)}\n')
