@@ -3,7 +3,7 @@ import json
 import tiktoken
 from openai import OpenAI, AuthenticationError
 
-class AI:
+class AI_Manager:
     #class initializer; contains a list and OpenAI instance
     def __init__(self):
         self.conv_history = list()
@@ -23,7 +23,7 @@ class AI:
             raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
 
     #handle_input; takes prompt as parameter
-    def handle_input(self, prompt, user='Kiri'):
+    def handle_input(self, prompt, user='user'):
         #check tokens of input, if it passes append to both history variables
         self.check_tokens(prompt)
         self.conv_history.append({'role': user, 'content': prompt})
@@ -69,7 +69,7 @@ class AI:
 # Use this to test only this file
 
 # def main():
-#     ai_test = AI()
+#     ai_test = AI_Manager()
 #     ai_test.set_behavior()
 #     print("Welcome to the ChatGPT API test!!\nInput whatever questions you have and/or type 'exit' to end the chat!\n")
 #     while True:
