@@ -23,11 +23,11 @@ class AI_Manager:
             raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
 
     #handle_input; takes prompt as parameter
-    def handle_input(self, prompt, user='user'):
+    def handle_input(self, prompt):
         #check tokens of input, if it passes append to both history variables
         self.check_tokens(prompt)
-        self.conv_history.append({'role': user, 'content': prompt})
-        self.full_history.append({'role': user, 'content': prompt})
+        self.conv_history.append({'role': 'user', 'content': prompt})
+        self.full_history.append({'role': 'user', 'content': prompt})
 
         #check current token count and conv_history length; begin deleting list elements if either checks pass
         if self.token_count > 13000 or len(self.conv_history) > 20:
@@ -67,23 +67,21 @@ class AI_Manager:
 
 
 # Use this to test only this file
-
-# def main():
-#     ai_test = AI_Manager()
-#     ai_test.set_behavior()
-#     print("Welcome to the ChatGPT API test!!\nInput whatever questions you have and/or type 'exit' to end the chat!\n")
-#     while True:
-#         question = input('What Question do you Have?: ')
-#         if question == 'exit' or question == 'Exit':
-#             break
-#         elif question == 'tokens' or question == 'Tokens':
-#             print(f'\n{ai_test.token_count}\n')
-#         elif question == 'history' or question == 'History':
-#             for i in ai_test.conv_history:
-#                 print(f'{i['role']}: {i['content']}')
-#         elif question == 'dump' or question == 'Dump':
-#             ai_test.dump_history()
-#             break
-#         else:
-#             print(f'\n{ai_test.handle_input(question)}\n')
-# main()
+if __name__ == '__main__':
+    ai_test = AI_Manager()
+    ai_test.set_behavior()
+    print("Welcome to the ChatGPT API test!!\nInput whatever questions you have and/or type 'exit' to end the chat!\n")
+    while True:
+        question = input('What Question do you Have?: ')
+        if question == 'exit' or question == 'Exit':
+            break
+        elif question == 'tokens' or question == 'Tokens':
+            print(f'\n{ai_test.token_count}\n')
+        elif question == 'history' or question == 'History':
+            for i in ai_test.conv_history:
+                print(f'{i["role"]}: {i["content"]}')
+        elif question == 'dump' or question == 'Dump':
+            ai_test.dump_history()
+            break
+        else:
+            print(f'\n{ai_test.handle_input(question)}\n')
