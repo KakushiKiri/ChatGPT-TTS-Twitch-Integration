@@ -1,5 +1,6 @@
 import os
 import keyboard
+import subprocess
 import azure.cognitiveservices.speech as speech
 
 class Azure_Manager:
@@ -29,27 +30,32 @@ class Azure_Manager:
         speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
 
         done = False
+        message = ""
         def stop_cb(evt):
-            print(f'Closing on {evt}')
+            print(f'Session Ended: {evt}')
             speech_recognizer.stop_continuous_recognition()
             nonlocal done
             done = True
 
-        def start_cb(evt):
-            print(f'Session Started: {evt}')
-        speech_recognizer.recognized.connect(start_cb)
+        def compile_lines(evt):
+            print(f'Recognized: {evt.result.text}')
+            nonlocal message
+            message += (evt.result.text + " ")
 
         speech_recognizer.canceled.connect(stop_cb)
         speech_recognizer.session_stopped.connect(stop_cb)
+        speech_recognizer.recognized.connect(compile_lines)
 
         result = speech_recognizer.start_continuous_recognition()
         print('--- Now Listening to Mic ---')
         while not done:
-            if keyboard.read_key() == stop:
+            if keyboard.is_pressed(stop):
+                print('Test 1')
                 speech_recognizer.stop_continuous_recognition()
+                print('Test 2')
 
-        print(f'Here is Your Message: {result}')
-        return result
+        print(f'Here is Your Message: {message.strip()}')
+        return message.strip()
     
 if __name__ == '__main__':
     stt = Azure_Manager()
