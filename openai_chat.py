@@ -12,7 +12,7 @@ class AI_Manager:
         try:
             self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         except AuthenticationError:
-            exit('ERROR -- You Dummy, you have the wrong API Key')
+            exit('ERROR -- You Dummy, you have the wrong OpenAI API Key')
 
     #check_tokens; Checks the tokens of an input, raises an error if it exceeds limit
     def check_tokens(self, input):

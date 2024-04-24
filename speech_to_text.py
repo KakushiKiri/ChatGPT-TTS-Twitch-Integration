@@ -11,7 +11,7 @@ class Azure_Manager:
             self.speech_config = speech.SpeechConfig(subscription=os.getenv('AZURE_API_KEY'), region=os.getenv('AZURE_REGION'))
             self.speech_config.speech_recognition_language = 'en-US'
         except:
-            exit('ERROR -- Oopsies, you have the wrong Azure API Key')
+            exit('ERROR -- You Dummy, you have the wrong Azure API Key')
 
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
@@ -31,7 +31,7 @@ class Azure_Manager:
             print(f'Mic Input Cancelled: {result.cancellation_details.reason}')
 
     #continuous_mic_input; reads from mic until user input, appending each input into one large message
-    def continuous_mic_input(self):
+    def continuous_mic_input(self, end_key='q'):
         message = ""
         done = False
         #in the case that the session is cancelled, this method will be done
@@ -53,7 +53,7 @@ class Azure_Manager:
         self.speech_recognizer.start_continuous_recognition()
         print('--- Now Listening to Mic ---')
         while not done:
-            if keyboard.is_pressed('q'):
+            if keyboard.is_pressed(end_key):
                 done = True
         self.speech_recognizer.stop_continuous_recognition()
 
