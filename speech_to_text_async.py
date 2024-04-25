@@ -12,6 +12,8 @@ class Azure_Manager:
         except:
             exit('ERROR -- You Dummy, you have the wrong Azure API Key')
 
+        self.speech_config = speech.ProfanityOption(self.speech_config.set_profanity('Raw'))
+        
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
 
@@ -37,7 +39,8 @@ class Azure_Manager:
         def stop_cb(evt):
             print(f'Session Ended: {evt}')
             self.speech_recognizer.stop_continuous_recognition()
-            self.continuous_check = True
+            nonlocal done
+            done = True
 
         #after each recognized input, it will print what you said and append it into the full message
         def compile_lines(evt):
@@ -61,8 +64,9 @@ class Azure_Manager:
 
     async def test_message(self):
         result = await self.continuous_mic_input()
-        print(f'Result Gotten: {result}')
+        return result
 
 if __name__ == '__main__':
     stt = Azure_Manager()
-    asyncio.run(stt.test_message())
+    message = asyncio.run(stt.test_message())
+    print(message)
