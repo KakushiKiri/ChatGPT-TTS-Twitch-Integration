@@ -12,7 +12,7 @@ class Azure_Manager:
         except:
             exit('ERROR -- You Dummy, you have the wrong Azure API Key')
 
-        self.speech_config = speech.ProfanityOption(self.speech_config.set_profanity('Raw'))
+        self.speech_config.set_profanity(speech.ProfanityOption.Raw)
         
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
