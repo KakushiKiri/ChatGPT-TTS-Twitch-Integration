@@ -1,6 +1,4 @@
 import os
-import threading
-import time
 import keyboard
 import azure.cognitiveservices.speech as speech
 
