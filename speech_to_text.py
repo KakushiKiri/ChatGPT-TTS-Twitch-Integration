@@ -1,4 +1,5 @@
 import os
+import asyncio
 import keyboard
 import azure.cognitiveservices.speech as speech
 
@@ -14,8 +15,6 @@ class Azure_Manager:
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
 
-        self.continuous_check = False
-
     #mic_input; reads from microphone a single time, listening for a maximum of 15 seconds OR until silence
     def mic_input(self):        
         print('Listening to Microphone:')
@@ -29,14 +28,13 @@ class Azure_Manager:
             print(f'Mic Input Cancelled: {result.cancellation_details.reason}')
 
     #continuous_mic_input; reads from mic until user input, appending each input into one large message
-    def continuous_mic_input(self, end_key='q'):
+    async def continuous_mic_input(self, end_key='q', sync=True):
         message = ""
         done = False
         #in the case that the session is cancelled, this method will be done
         def stop_cb(evt):
             print(f'Session Ended: {evt}')
             self.speech_recognizer.stop_continuous_recognition()
-            self.continuous_check = True
 
         #after each recognized input, it will print what you said and append it into the full message
         def compile_lines(evt):
@@ -48,17 +46,28 @@ class Azure_Manager:
         self.speech_recognizer.recognized.connect(compile_lines) #connect compile_lines to the recognized event flag4
 
         #begin continuous recognition and loop while the check is False
-        self.speech_recognizer.start_continuous_recognition()
-        print('--- Now Listening to Mic ---')
-        while not done:
-            if keyboard.is_pressed(end_key):
-                done = True
-        self.speech_recognizer.stop_continuous_recognition()
+        if sync:
+            self.speech_recognizer.start_continuous_recognition()
+            print('--- Now Listening to Mic ---')
+            while not done:
+                if keyboard.is_pressed(end_key):
+                    done = True
+            self.speech_recognizer.stop_continuous_recognition()
+        else:
+            self.speech_recognizer.start_continuous_recognition_async()
+            print('--- Now Listening to Mic ---')
+            while not done:
+                if keyboard.is_pressed(end_key):
+                    done = True
+            self.speech_recognizer.stop_continuous_recognition_async()
 
         #print final message and return
-        print(f'Here is Your Message: {message.strip()}')
         return message.strip()
 
+    async def test(self):
+        message = await self.continuous_mic_input(sync=False)
+        return message
+    
 if __name__ == '__main__':
     stt = Azure_Manager()
-    stt.continuous_mic_input()
+    print(asyncio.run(stt.test()))

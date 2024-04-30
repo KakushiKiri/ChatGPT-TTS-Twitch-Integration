@@ -23,7 +23,7 @@ class AI_Manager:
             raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
 
     #handle_input; takes prompt as parameter
-    def handle_input(self, prompt):
+    def handle_input_sync(self, prompt):
         #check tokens of input, if it passes append to both history variables
         self.check_tokens(prompt)
         self.conv_history.append({'role': 'user', 'content': prompt})
@@ -49,6 +49,46 @@ class AI_Manager:
 
         return response
     
+    def handle_input(self, prompt, stream=True):
+        response = ''
+
+        #check tokens of input, if it passes append to both history variables
+        self.check_tokens(prompt)
+        self.conv_history.append({'role': 'user', 'content': prompt})
+        self.full_history.append({'role': 'user', 'content': prompt})
+
+        #check current token count and conv_history length; begin deleting list elements if either checks pass
+        if self.token_count > 13000 or len(self.conv_history) > 20:
+            while len(self.conv_history) > 20 or self.token_count > 13000:
+                encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
+                self.token_count -= len(encoding.encode(self.conv_history[1]['content']))
+                del self.conv_history[1]
+
+        #send API request to OpenAI; you may change model if you have access but other parts of code might need changing
+        if stream:
+            prepare = self.client.chat.completions.create(
+                model='gpt-3.5-turbo',
+                messages=self.conv_history
+            )
+            response =  prepare.choices[0].message.content
+        else:
+            stream = self.client.chat.completions.create(
+                model='gpt-3.5-turbo',
+                messages=self.conv_history,
+                stream=True
+            )
+
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    response += chunk.choices[0].delta.content
+
+        #similar to the question, retrieve the response and append to the conversation history, then return response
+        self.conv_history.append({'role': 'assistant', 'content': response})
+        self.full_history.append({'role': 'assistant', 'content': response})
+
+        self.check_tokens(response)
+        return response   
+
     #set_behavior; no parameters as it should only be used if 'behavior.txt' is present
     def set_behavior(self):
         #check if file is present, else raise FileNotFoundError
@@ -58,7 +98,7 @@ class AI_Manager:
             self.check_tokens(behavior)
             self.conv_history.append({'role': 'user', 'content': behavior})
         else:
-            raise FileNotFoundError('ERROR -- No Behavior File Found')
+            return "No Behavior File Present"
     
     #dump_history; if program breaks, the conversation history will be dumped into a file
     def dump_history(self):
@@ -73,15 +113,15 @@ if __name__ == '__main__':
     print("Welcome to the ChatGPT API test!!\nInput whatever questions you have and/or type 'exit' to end the chat!\n")
     while True:
         question = input('What Question do you Have?: ')
-        if question == 'exit' or question == 'Exit':
+        if question.lower == 'exit':
             break
-        elif question == 'tokens' or question == 'Tokens':
+        elif question.lower == 'tokens':
             print(f'\n{ai_test.token_count}\n')
-        elif question == 'history' or question == 'History':
+        elif question.lower == 'history':
             for i in ai_test.conv_history:
                 print(f'{i["role"]}: {i["content"]}')
-        elif question == 'dump' or question == 'Dump':
+        elif question.lower == 'dump':
             ai_test.dump_history()
             break
         else:
-            print(f'\n{ai_test.handle_input(question)}\n')
+            print(f'\n{ai_test.handle_input_sync(question, False)}\n')
