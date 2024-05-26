@@ -37,7 +37,7 @@ class AI_Manager:
 
         #check tokens of input, if it passes append to both history variables
         self.check_tokens(prompt)
-        self.append_conv(self, 'user', prompt)
+        self.append_conv('user', prompt)
 
         #check current token count and conv_history length; begin deleting list elements if either checks pass
         if self.token_count > 13000 or len(self.conv_history) > self.CONV_LEN:
@@ -65,7 +65,7 @@ class AI_Manager:
                     response += chunk.choices[0].delta.content
 
         #similar to the question, retrieve the response and append to the conversation history, then return response
-        self.append_conv(self, 'assistant', response)
+        self.append_conv('assistant', response)
         self.check_tokens(response)
         return response   
 
