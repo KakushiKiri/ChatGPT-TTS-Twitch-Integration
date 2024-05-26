@@ -4,6 +4,8 @@ import tiktoken
 from openai import OpenAI, AuthenticationError
 
 class AI_Manager:
+    CONV_LEN = 20
+
     #class initializer; contains a list and OpenAI instance
     def __init__(self):
         self.conv_history = list()
@@ -14,6 +16,14 @@ class AI_Manager:
         except AuthenticationError:
             exit('ERROR -- You Dummy, you have the wrong OpenAI API Key')
 
+    @classmethod
+    def set_conv_len(cls, amt):
+        cls.CONV_LEN = amt
+
+    def append_conv(self, role, content):
+        self.conv_history.append({'role': role, 'content': content})
+        self.full_history.append({'role': role, 'content': content})       
+
     #check_tokens; Checks the tokens of an input, raises an error if it exceeds limit
     def check_tokens(self, input):
         encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
@@ -22,43 +32,15 @@ class AI_Manager:
         else:
             raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
 
-    #handle_input; takes prompt as parameter
-    def handle_input_sync(self, prompt):
-        #check tokens of input, if it passes append to both history variables
-        self.check_tokens(prompt)
-        self.conv_history.append({'role': 'user', 'content': prompt})
-        self.full_history.append({'role': 'user', 'content': prompt})
-
-        #check current token count and conv_history length; begin deleting list elements if either checks pass
-        if self.token_count > 13000 or len(self.conv_history) > 20:
-            while len(self.conv_history) > 20 or self.token_count > 13000:
-                encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
-                self.token_count -= len(encoding.encode(self.conv_history[1]['content']))
-                del self.conv_history[1]
-
-        #send API request to OpenAI; you may change model if you have access but other parts of code might need changing
-        prepare = self.client.chat.completions.create(
-            model='gpt-3.5-turbo',
-            messages=self.conv_history
-        )
-
-        #similar to the question, retrieve the response and append to the conversation history, then return response
-        response =  prepare.choices[0].message.content
-        self.conv_history.append({'role': 'assistant', 'content': response})
-        self.full_history.append({'role': 'assistant', 'content': response})
-
-        return response
-    
     def handle_input(self, prompt, stream=True):
         response = ''
 
         #check tokens of input, if it passes append to both history variables
         self.check_tokens(prompt)
-        self.conv_history.append({'role': 'user', 'content': prompt})
-        self.full_history.append({'role': 'user', 'content': prompt})
+        self.append_conv(self, 'user', prompt)
 
         #check current token count and conv_history length; begin deleting list elements if either checks pass
-        if self.token_count > 13000 or len(self.conv_history) > 20:
+        if self.token_count > 13000 or len(self.conv_history) > self.CONV_LEN:
             while len(self.conv_history) > 20 or self.token_count > 13000:
                 encoding = tiktoken.encoding_for_model('gpt-3.5-turbo')
                 self.token_count -= len(encoding.encode(self.conv_history[1]['content']))
@@ -83,9 +65,7 @@ class AI_Manager:
                     response += chunk.choices[0].delta.content
 
         #similar to the question, retrieve the response and append to the conversation history, then return response
-        self.conv_history.append({'role': 'assistant', 'content': response})
-        self.full_history.append({'role': 'assistant', 'content': response})
-
+        self.append_conv(self, 'assistant', response)
         self.check_tokens(response)
         return response   
 
