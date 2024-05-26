@@ -1,6 +1,4 @@
 from os import getenv, getcwd, remove
-from time import sleep
-from asyncio import wait, run
 from os.path import join
 from elevenlabs.client import ElevenLabs, AsyncElevenLabs
 from elevenlabs import save, stream, play
