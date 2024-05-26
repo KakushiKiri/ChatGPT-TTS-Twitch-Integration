@@ -2,6 +2,7 @@ from openai_chat import AI_Manager
 from elevenlabs_tts import TTS_Manager
 from speech_to_text import Azure_Manager
 from vad_manager import VAD_Manager
+from threading import Thread
 import time
 import numpy as np
 import queue
@@ -11,6 +12,9 @@ class Thread_Manager():
     def __init__(self):
         self.speech_queue = queue.Queue(5)
         self.found_speech = False
+        self.pause_vad = False
+        self.finished = True
+
         self.AI = AI_Manager()
         self.TTS = TTS_Manager()
         self.STT = Azure_Manager(self.speech_queue)
@@ -35,11 +39,38 @@ class Thread_Manager():
             if new_confidence >= 0.8:
                 stream.stop_stream()
                 self.found_speech = True
-                self.STT.continuous_mic_input(sync=True)
-                print(self.speech_queue.empty())
-            while self.found_speech:
-                time.sleep(0.1)
+                self.pause_vad = True
+                while self.pause_vad:
+                    time.sleep(0.1)
+                stream.start_stream()
         print('Stopped Recording')
+    
+    def Recognition_Thread(self):
+        while not self.finished:
+            if self.found_speech:
+                self.STT.continuous_mic_input(sync=True)
+                self.found_speech = False
+            time.sleep(0.1)
 
-Threads = Thread_Manager()
-Threads.VAD_Thread()
+    def AI_Thread(self):
+        while not self.finished:
+            if not self.speech_queue.empty():
+                response = self.AI.handle_input(self.speech_queue.get())
+                self.TTS.stream_tts(response)
+                self.pause_vad = False
+            time.sleep(0.1)
+
+    def Create_Threads(self):
+        vad_thread = Thread(target=self.VAD_Thread)
+        recognition_thread = Thread(target=self.Recognition_Thread)
+        ai_thread = Thread(target=self.AI_Thread)
+
+        vad_thread.start()
+        recognition_thread.start()
+        ai_thread.start()
+
+if __name__ == '__main__':
+    Threads = Thread_Manager()
+    if not Threads.finished:
+        Threads.finished = False
+        Threads.Create_Threads()
