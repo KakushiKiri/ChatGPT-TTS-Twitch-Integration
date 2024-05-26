@@ -2,10 +2,11 @@ import os
 import asyncio
 import keyboard
 import azure.cognitiveservices.speech as speech
+import queue
 
 #azure_manager; contains the initializer, audio_config, speech_recognizer, and a check variable used by the continuous method
 class Azure_Manager:
-    def __init__(self):
+    def __init__(self, speech_queue):
         try:
             self.speech_config = speech.SpeechConfig(subscription=os.getenv('AZURE_API_KEY'), region=os.getenv('AZURE_REGION'))
             self.speech_config.speech_recognition_language = 'en-US'
@@ -14,6 +15,8 @@ class Azure_Manager:
 
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
+
+        self.speech_queue = speech_queue
 
     #mic_input; reads from microphone a single time, listening for a maximum of 15 seconds OR until silence
     def mic_input(self):        
@@ -28,7 +31,7 @@ class Azure_Manager:
             print(f'Mic Input Cancelled: {result.cancellation_details.reason}')
 
     #continuous_mic_input; reads from mic until user input, appending each input into one large message
-    async def continuous_mic_input(self, end_key='q', sync=True):
+    def continuous_mic_input(self, end_key='q', sync=True):
         message = ""
         done = False
         #in the case that the session is cancelled, this method will be done
@@ -62,7 +65,7 @@ class Azure_Manager:
             self.speech_recognizer.stop_continuous_recognition_async()
 
         #print final message and return
-        return message.strip()
+        self.speech_queue.put(message, block=False)
 
     async def test(self):
         message = await self.continuous_mic_input(sync=False)
