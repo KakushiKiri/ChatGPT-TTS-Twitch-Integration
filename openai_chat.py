@@ -7,7 +7,7 @@ class AI_Manager:
     CONV_LEN = 20
 
     #class initializer; contains a list and OpenAI instance
-    def __init__(self):
+    def __init__(self, ai_queue):
         self.conv_history = list()
         self.full_history = list()
         self.token_count = 0
@@ -15,6 +15,8 @@ class AI_Manager:
             self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
         except AuthenticationError:
             exit('ERROR -- You Dummy, you have the wrong OpenAI API Key')
+
+        self.ai_queue = ai_queue
 
     @classmethod
     def set_conv_len(cls, amt):
@@ -32,7 +34,7 @@ class AI_Manager:
         else:
             raise ValueError('ERROR -- Given Prompt Exceeds Token Limit')
 
-    def handle_input(self, prompt, stream=True):
+    def handle_input(self, prompt, stream=False):
         response = ''
 
         #check tokens of input, if it passes append to both history variables
@@ -47,12 +49,13 @@ class AI_Manager:
                 del self.conv_history[1]
 
         #send API request to OpenAI; you may change model if you have access but other parts of code might need changing
-        if stream:
+        if not stream:
             prepare = self.client.chat.completions.create(
                 model='gpt-3.5-turbo',
                 messages=self.conv_history
             )
             response =  prepare.choices[0].message.content
+            self.ai_queue.put(response)
         else:
             stream = self.client.chat.completions.create(
                 model='gpt-3.5-turbo',
@@ -63,11 +66,11 @@ class AI_Manager:
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     response += chunk.choices[0].delta.content
+            self.ai_queue.put(response)
 
         #similar to the question, retrieve the response and append to the conversation history, then return response
         self.append_conv('assistant', response)
-        self.check_tokens(response)
-        return response   
+        self.check_tokens(response)  
 
     #set_behavior; no parameters as it should only be used if 'behavior.txt' is present
     def set_behavior(self):
@@ -75,8 +78,9 @@ class AI_Manager:
         if os.path.isfile('behavior.txt'):
             with open('behavior.txt', 'r') as fname:    #open file and store contents in variable; then call handle_input with said variable
                 behavior = fname.read().strip()
-            self.check_tokens(behavior)
-            self.conv_history.append({'role': 'user', 'content': behavior})
+            if len(behavior) != 0:
+                self.check_tokens(behavior)
+                self.conv_history.append({'role': 'user', 'content': behavior})
         else:
             return "No Behavior File Present"
     
@@ -104,4 +108,4 @@ if __name__ == '__main__':
             ai_test.dump_history()
             break
         else:
-            print(f'\n{ai_test.handle_input_sync(question, False)}\n')
+            print(f'\n{ai_test.handle_input(question, True)}\n')
