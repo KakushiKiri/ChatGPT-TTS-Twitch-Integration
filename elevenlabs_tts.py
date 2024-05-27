@@ -23,7 +23,7 @@ class TTS_Manager:
         playsound(dir)
         remove(dir)
 
-    async def file_tts(self, input, file_name='current_line.mp3'):
+    def file_tts(self, input, file_name='current_line.mp3'):
         audio = self.client.generate(
             text = input,
             voice = self.main_voice,
