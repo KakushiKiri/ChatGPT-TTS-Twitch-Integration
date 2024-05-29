@@ -9,6 +9,14 @@ import pyaudio
 
 class VAD_Manager():
     def __init__(self):
+        """initializes SileroVAD for use
+        
+           no param
+
+           init: model/utils -- loaded from torch
+                 FORMAT, CHANNELS, SAMPLE_RATE, CHUNK -- values for pyaudio
+                 audio -- pyaudio instance
+        """
         self.model, self.utils = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad', force_reload=True)
         (self.get_speech_timestamps,
         self.save_audio,
@@ -33,22 +41,27 @@ class VAD_Manager():
         return sound
 
     def start_recording(self):
+        """begins recording with the VAD, the closer to 1 the more likely it is speech
+        
+           no params
+        """
         stream = self.audio.open(format=self.FORMAT,
                         channels=self.CHANNELS,
                         rate=self.SAMPLE_RATE,
                         input=True,
                         frames_per_buffer=self.CHUNK)
         continue_recording = True
+        try:
+            while continue_recording:
+                audio_chunk = stream.read(self.num_samples)
+                audio_int16 = np.frombuffer(audio_chunk, np.int16)
+                audio_float32 = self.int2float(audio_int16)
 
-        while continue_recording:
-            audio_chunk = stream.read(self.num_samples)
-            audio_int16 = np.frombuffer(audio_chunk, np.int16)
-            audio_float32 = self.int2float(audio_int16)
-
-            # get the confidences
-            new_confidence = self.model(torch.from_numpy(audio_float32), 16000).item()
-            print(new_confidence)
-        print('Stopped Recording')
+                # get the confidences
+                new_confidence = self.model(torch.from_numpy(audio_float32), 16000).item()
+                print(new_confidence)
+        except KeyboardInterrupt:
+            exit("Stopped Recording")
 
 if __name__ == '__main__':
     VAD = VAD_Manager()
