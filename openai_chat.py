@@ -82,7 +82,7 @@ class AI_Manager:
             )
             print('Response Generated')
             response =  prepare.choices[0].message.content
-            self.ai_queue.put(response)
+            self.ai_queue.put(response, block=False)
         else:
             response = ''
             stream = self.client.chat.completions.create(
@@ -94,7 +94,7 @@ class AI_Manager:
             for chunk in stream:
                 if chunk.choices[0].delta.content is not None:
                     response += chunk.choices[0].delta.content
-            self.ai_queue.put(response)
+            self.ai_queue.put(response, block=False)
 
         #similar to the question, retrieve the response and append to the conversation history
         self.append_conv('assistant', response)
