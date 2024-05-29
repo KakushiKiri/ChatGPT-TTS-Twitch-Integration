@@ -42,7 +42,8 @@ class VAD_Manager():
 
     def start_recording(self):
         """begins recording with the VAD, the closer to 1 the more likely it is speech
-        
+           (this is more for testing for now)
+
            no params
         """
         stream = self.audio.open(format=self.FORMAT,
