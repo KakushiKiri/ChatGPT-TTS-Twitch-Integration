@@ -16,6 +16,9 @@ class Azure_Manager:
         self.audio_config = speech.AudioConfig(use_default_microphone=True)
         self.speech_recognizer = speech.SpeechRecognizer(speech_config=self.speech_config, audio_config=self.audio_config)
 
+        self.audio_config_out = speech.audio.AudioOutputConfig(use_default_speaker=True)
+        self.speech_synth = speech.SpeechSynthesizer(speech_config=self.speech_config, audio_config=self.audio_config_out)
+
         self.speech_queue = speech_queue
 
     #mic_input; reads from microphone a single time, listening for a maximum of 15 seconds OR until silence
@@ -67,10 +70,11 @@ class Azure_Manager:
         #print final message and return
         self.speech_queue.put(message, block=False)
 
-    async def test(self):
-        message = await self.continuous_mic_input(sync=False)
-        return message
+    def azure_tts(self, input):
+        print('Beginning TTS')
+        self.speech_synth.speak_text(input)
+        print('TTS Ended')
     
 if __name__ == '__main__':
     stt = Azure_Manager()
-    print(asyncio.run(stt.test()))
+    stt.azure_tts('I am testing this program.')

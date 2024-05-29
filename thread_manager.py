@@ -2,7 +2,7 @@ from openai_chat import AI_Manager
 from elevenlabs_tts import TTS_Manager
 from speech_to_text import Azure_Manager
 from vad_manager import VAD_Manager
-from threading import Thread
+from threading import Thread, Event
 import keyboard
 import time
 import numpy as np
@@ -13,14 +13,14 @@ class Thread_Manager():
     def __init__(self):
         self.speech_queue = queue.Queue(5)
         self.tts_queue = queue.Queue(5)
-        self.found_speech = False
-        self.pause_vad = False
-        self.finished = True
 
+        self.found_speech = Event()
+        self.pause_vad = Event()
+        self.finished = False
         self.continue_recording = True
 
         self.AI = AI_Manager(self.tts_queue)
-        self.TTS = TTS_Manager()
+        # self.TTS = TTS_Manager()
         self.STT = Azure_Manager(self.speech_queue)
         self.VAD = VAD_Manager()
 
@@ -46,10 +46,9 @@ class Thread_Manager():
             #print(new_confidence)
             if new_confidence >= 0.6:
                 stream.stop_stream()
-                self.found_speech = True
-                self.pause_vad = True
-                while self.pause_vad:
-                    time.sleep(0.1)
+                self.found_speech.set()  
+                self.pause_vad.wait()
+                self.pause_vad.clear()
                 stream.start_stream()
         stream.stop_stream()
         self.VAD.audio.terminate()
@@ -57,23 +56,33 @@ class Thread_Manager():
     
     def Recognition_Thread(self):
         while not self.finished:
-            if self.found_speech:
-                self.STT.continuous_mic_input(sync=True)
-                self.found_speech = False
-                self.pause_vad = False
-            time.sleep(0.1)
+            self.found_speech.wait()
+            self.STT.continuous_mic_input(sync=True)
+            self.found_speech.clear()
 
     def AI_Thread(self):
         while not self.finished:
             if not self.speech_queue.empty():
                 self.AI.handle_input(self.speech_queue.get())
-                self.pause_vad = False
             time.sleep(0.1)
 
     def TTS_Thread(self):
         while not self.finished:
             if not self.tts_queue.empty():
-                self.TTS.stream_tts(self.tts_queue.get())
+                self.STT.azure_tts(self.tts_queue.get())
+                self.pause_vad.set()
+                # def text_stream():
+                #     for i in self.tts_list:
+                #         yield i
+                
+                # audio_stream = self.TTS.client.generate(
+                #     text=text_stream(),
+                #     voice=self.TTS.main_voice,
+                #     model = 'eleven_multilingual_v2',
+                #     stream=True
+                # )
+                # self.pause_vad=False
+                # self.TTS.stream_tts(audio_stream=audio_stream)
             time.sleep(0.1)
 
     def Create_Threads(self):
@@ -88,7 +97,6 @@ class Thread_Manager():
         self.tts_thread.start()
     
     def stop_threads(self):
-        self.finished = True
         self.vad_thread.join(timeout=0.5)
         self.ai_thread.join(timeout=0.5)
         self.recognition_thread.join(timeout=0.5)

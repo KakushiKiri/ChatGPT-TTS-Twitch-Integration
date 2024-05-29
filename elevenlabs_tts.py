@@ -32,12 +32,15 @@ class TTS_Manager:
         dir = join(getcwd(), file_name)
         save(audio, dir)
     
-    def stream_tts(self, input):
-        audio_stream = self.client.generate(
-            text=input,
-            stream=True
-        )
-        stream(audio_stream)
+    def stream_tts(self, / ,input='DEFAULT', audio_stream='DEFAULT'):
+        if input == 'DEFAULT':
+            stream(audio_stream)
+        else:
+            audio_stream = self.client.generate(
+                text=input,
+                stream=True
+            )
+            stream(audio_stream)
         
 if __name__ == '__main__':
     tts = TTS_Manager(True)
