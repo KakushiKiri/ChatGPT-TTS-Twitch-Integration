@@ -57,13 +57,9 @@ class Thread_Manager():
             audio_float32 = self.VAD.int2float(audio_int16)
 
             new_confidence = self.VAD.model(torch.from_numpy(audio_float32), 16000).item()
-            #print(new_confidence)
-            if new_confidence >= 0.6:
-                stream.stop_stream()
-                self.found_speech.set()  
-                self.pause_vad.wait()
-                self.pause_vad.clear()
-                stream.start_stream()
+            if not self.found_speech.is_set():
+                if new_confidence >= 0.6:
+                    self.found_speech.set()
     
     def Recognition_Thread(self):
         """waits for event from VAD_Thread, then runs continuous mic input
